@@ -9,13 +9,15 @@ import os
 import sys
 import pymongo
 import requests
+import shutil
 
 class PymongoDataSave():
 	def __init__(self,data='test'):
 		self.s=requests.session()
 		self.client=pymongo.MongoClient()
-
 		self.wuxian=self.client.wuxianxiaoshuo
+
+		self.txthandler=  Handletxt()
 		
 	def saveDataInDB(self,db,datalist,):
 		print(datalist)
@@ -26,6 +28,8 @@ class PymongoDataSave():
 		table=self.wuxian[db]
 		datalist=table.find()
 		#print('类型【%s】 有小说【%d】部' % (db,len(datalist)))
+		f_fail=open('C:\\code\\Python\\Novel\\'+db+'.txt','w',encoding='utf-8')
+		i=1
 		for item in datalist:
 			novelname=item['novelname']
 			author=item['author']
@@ -36,14 +40,39 @@ class PymongoDataSave():
 			novelsize=item['novelsize']
 			txtdownload=item['txtdownload']
 			zipdownload=item['zipdownload']
-			print(novelname,author,novelid,noveltype,novelsize,downloadNum,novelurl)
 
-			novelpath='无限小说'+'/'+noveltype
+			info='i=[%d],novelname=%s,author=%s,novelid=%s,noveltype=%s,novelsize=%s,downloadNum=%s,novelurl=%s' % (i,novelname,author,novelid,noveltype,novelsize,downloadNum,novelurl)
+			print(info)
+			i=i+1
+			novelpath='C:\\code\\Python\\Novel\\无限小说'+'/'+noveltype
+			handlenovelpath='C:\\code\\Python\\Novel\\无限小说原始'+'/'+noveltype
+			failconvertpath='C:\\code\\Python\\Novel\\无限小说原始not'+'/'+noveltype
 			if not os.path.exists(novelpath):
 				os.makedirs(novelpath)
-			contentpath=novelpath+'/'+novelname+'.txt'
-			if not os.path.exists(contentpath):
-				self.save_file_with_response(contentpath,txtdownload)
+			if not os.path.exists(handlenovelpath):
+				os.makedirs(handlenovelpath)
+			if not os.path.exists(failconvertpath):
+				os.makedirs(failconvertpath)
+
+			txtpath=novelpath+'/'+novelname+'.txt'
+			handletxtpath=handlenovelpath+'/'+novelname+'.txt'
+			failconvertxtpath=failconvertpath+'/'+novelname+'.txt'
+
+			fileflag=True
+			if not os.path.exists(txtpath):
+				fileflag=self.save_file_with_response(txtpath,txtdownload)
+			
+			if (not fileflag ):
+				f_fail.write(info)
+				f_fail.write('\n')
+			elif  (not self.txthandler.handletxt(txtpath,handletxtpath)) :
+				f_fail.write(info)
+				f_fail.write('\t\t\t 已经转换过了\n')
+				#shutil.copy(txtpath,failconvertxtpath)
+				self.txthandler.delete_txt_without_encoding(txtpath,failconvertxtpath)
+
+
+		f_fail.close()
 
 	def save_file_with_response(self,filename, url):
 		def get_url_response(url):
@@ -57,18 +86,31 @@ class PymongoDataSave():
 		           }
 			#r = s.get(url, headers=headers, stream=True)
 			#r = s.get(url, stream=True)
-			r = self.s.get(url)
+			try:
+				r = self.s.get(url)
+			except Exception as e:
+				print('filename=[%s] 获取其网页失败'% filename)
+				print(e)
+				return False
 			#print(r)
 			return r
-		with open(filename, 'wb') as fd:
-		    for chunk in get_url_response(url).iter_content(chunk_size=128):
-	        	fd.write(chunk)
+		content = get_url_response(url)
+		if content == False:
+			return False
+		else:
+			with open(filename, 'wb') as fd:
+			    for chunk in content.iter_content(chunk_size=128):
+		        	fd.write(chunk)
+			return True
+	
 	def print_database_and_table_name(self):
 		for database in self.client.database_names():
 			if 'wuxianxiaoshuo' == database:
 				for table in self.client['wuxianxiaoshuo'].collection_names():
 					#print('table [%s] is in database [%s]' %(table,database))
 					print('"%s",'% table)
+				for table in self.client['wuxianxiaoshuo'].collection_names():	
+					print('"%s  [%d]",'% (table,self.wuxian[table].find().count()))
 			#for table in self.client[database].collection_names():
 			#	print('table [%s] is in database [%s]' %(table,database))
 
@@ -103,44 +145,94 @@ class Handletxt():
 				print("parent folder is:" + parent)
 				print("filename with full path:"+ os.path.join(parent,filename))
 		'''
-	def delete_other(self,path,newpath):
-		try:
-			fread=open(path,'r',encoding='gbk')
-			f=fread.readlines()
-			fread.close()
-			if '用户上传之内容开始' in f[1] and '用户上传之内容结束' in f[-2]:
-				f=f[2:-2]
-
-			os.remove(path)
-			fwrite=open(newpath,'w',encoding='utf-8')
-			fwrite.writelines(f)
-			fwrite.close()
-
-		except Exception as e1:
-			print('%s  gbk编码格式不能处理' % path)
-			print(e1)
-			fread.close()
+	def handletxt(self,path,newpath):
+		def delete_txt_with_encoding(path,newpath,openEncoding='gbk'):
+			if os.path.exists(path):
+				fread1=open(path,'r',encoding=openEncoding)
+			else:
+				return False
 			try:
-				fread=open(path,'r',encoding='utf-8')
-				f2=fread.readlines()
-				fread.close()
-				if '用户上传之内容开始' in f2[1] and '用户上传之内容结束' in f2[-2]:
-					f=f[2:-2]
-				os.remove(path)
-				fwrite=open(newpath,'w',encoding='utf-8')
-				fwrite.writelines(f2)
-				fwrite.close()
-			except Exception as e2:
-				print('%s 编码格式有问题，gbk和utf-8都不能处理'% path)	
-				print(e2)
-				return
+				f1=fread1.readlines()
+				fread1.close()
+				if '用户上传之内容开始' in f1[1] and '用户上传之内容结束' in f1[-2]:
+					f1=f1[2:-2]
+				#os.remove(path)
+				fwrite1=open(newpath,'w',encoding='utf-8')
+				fwrite1.writelines(f1)
+				fwrite1.close()
+				return True
+			except Exception as e1:
+				fread1.close()
+				print('[%s] 以【%s】 编码格式不能处理' % (path,openEncoding))
+				print(e1)
+				return False
 
-			return
+		if delete_txt_with_encoding(path,newpath):
+			return True
+		else:
+			return delete_txt_with_encoding(path,newpath,openEncoding='utf-8')
 
-		#print('%s  处理结束' % path)
+	def delete_txt_without_encoding(self,path,newpath):
+		fread1=open(path,'rb')
+		f1=fread1.readlines()
+		if '用户上传之内容开始' in f1[1].decode('gbk') and '用户上传之内容结束' in f1[-2].decode('gbk'):
+			f1=f1[2:-2]
+		fread1.close()
+
+		fwrite1=open(newpath,'wb')
+		fwrite1.writelines(f1)
+		fwrite1.close()
 
 
+
+
+b=[
+"现代异侠  [8]",
+"耽美百合  [22]",
+"探险推理  [35]",
+"作者合集  [51]",
+"军警谍战  [93]",
+"热血青春  [143]",
+"灵异奇谈  [245]",
+"现代修真  [418]",
+"奇幻魔法  [419]",
+"衍生同人  [447]",
+"职场励志  [555]",
+"官场商战  [597]",
+"科幻小说  [633]",
+"武侠小说  [688]",
+"网游竞技  [1434]",
+"历史军工  [1753]",
+"都市异能  [1888]",
+"都市生活  [1937]",
+"仙侠修真  [2256]",
+"异世大陆  [2386]",
+"东方玄幻  [4564]",
+"言情小说  [5126]"
+]
+a=["奇幻魔法",
+"探险推理",
+"作者合集",
+"耽美百合",
+"军警谍战",
+"都市异能",
+"都市生活",
+"武侠小说",
+"历史军工",
+"现代异侠",
+"网游竞技",
+"官场商战",
+"热血青春",
+"仙侠修真",
+"东方玄幻",
+"灵异奇谈",
+"衍生同人",
+"职场励志",
+"现代修真",
+"异世大陆",
+"言情小说",
+"科幻小说"]
+#print(sys.argv[1])
 mymongo=PymongoDataSave()
-
-mymongo.print_database_and_table_name()
-mymongo.getData('东方玄幻')
+#mymongo.print_database_and_table_name()
+mymongo.getData('历史军工')
