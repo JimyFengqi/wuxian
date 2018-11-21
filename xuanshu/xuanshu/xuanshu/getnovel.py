@@ -15,7 +15,7 @@ class PymongoDataSave():
 	def __init__(self,data='test'):
 		self.s=requests.session()
 		self.client=pymongo.MongoClient()
-		self.wuxian=self.client.wuxianxiaoshuo
+		self.wuxian=self.client.xuanshuxiaoshuo
 
 		self.txthandler=  Handletxt()
 		
@@ -28,7 +28,7 @@ class PymongoDataSave():
 		table=self.wuxian[db]
 		datalist=table.find()
 		#print('类型【%s】 有小说【%d】部' % (db,len(datalist)))
-		f_fail=open('E:\\python_study\\wuxianxiaoshuo\\'+db+'.txt','w',encoding='utf-8')
+		f_fail=open('E:\\python_study\\炫书\\炫书小说\\'+db+'.txt','w',encoding='utf-8')
 		i=1
 		for item in datalist:
 			novelname=item['novelname']
@@ -44,9 +44,9 @@ class PymongoDataSave():
 			info='i=[%d],novelname=%s,author=%s,novelid=%s,noveltype=%s,novelsize=%s,downloadNum=%s,novelurl=%s' % (i,novelname,author,novelid,noveltype,novelsize,downloadNum,novelurl)
 			print(info)
 			i=i+1
-			novelpath='E:\\python_study\\wuxianxiaoshuo\\无限小说'+'/'+noveltype
-			handlenovelpath='E:\\python_study\\wuxianxiaoshuo\\无限小说原始'+'/'+noveltype
-			failconvertpath='E:\\python_study\\wuxianxiaoshuo\\无限小说原始not'+'/'+noveltype
+			novelpath='E:\\python_study\\炫书\\炫书小说'+'/'+noveltype
+			handlenovelpath='E:\\python_study\\炫书\\炫书小说原始'+'/'+noveltype
+			failconvertpath='E:\\python_study\\炫书\\炫书小说原始not'+'/'+noveltype
 			if not os.path.exists(novelpath):
 				os.makedirs(novelpath)
 			if not os.path.exists(handlenovelpath):
@@ -64,15 +64,17 @@ class PymongoDataSave():
 			if not os.path.exists(txtpath):
 				fileflag=self.save_file_with_response(txtpath,txtdownload)
 			
+			
 			if (not fileflag ):
 				f_fail.write(info)
 				f_fail.write('\n')
+			''''
 			elif  (not self.txthandler.handletxt(txtpath,handletxtpath)) :
 				f_fail.write(info)
 				f_fail.write('\t\t\t 已经转换过了\n')
 				#shutil.copy(txtpath,failconvertxtpath)
 				self.txthandler.delete_txt_without_encoding(txtpath,failconvertxtpath)
-
+			'''
 
 		f_fail.close()
 
@@ -108,11 +110,11 @@ class PymongoDataSave():
 	def print_database_and_table_name(self):
 		a=0
 		for database in self.client.database_names():
-			if 'wuxianxiaoshuo' == database:
-				for table in self.client['wuxianxiaoshuo'].collection_names():
+			if 'xuanshuxiaoshuo' == database:
+				for table in self.client['xuanshuxiaoshuo'].collection_names():
 					#print('table [%s] is in database [%s]' %(table,database))
 					print('"%s",'% table)
-				for table in self.client['wuxianxiaoshuo'].collection_names():	
+				for table in self.client['xuanshuxiaoshuo'].collection_names():	
 					a=a+self.wuxian[table].find().count()
 					print('"%s  [%d/%d]",'% (table,self.wuxian[table].find().count(),a))
 			#for table in self.client[database].collection_names():
@@ -196,37 +198,22 @@ def test():
 	tasthandle=Handletxt()
 	#tasthandle.getfilelist(r'E:\python_study\wuxianxiaoshuo\无限小说原始not\异世大陆')
 	tasthandle.getfilelist(r'E:\python_study\wuxianxiaoshuo\无限小说\东方玄幻')
-test()
+#test()
 b=[
-"现代异侠  [8]",
-"耽美百合  [22]",
-"探险推理  [35]",
-"作者合集  [51]",
-"军警谍战  [93]",
-"热血青春  [143]",
-"灵异奇谈  [245]",
-"现代修真  [418]",
-"奇幻魔法  [419]",
-"衍生同人  [447]",
-"职场励志  [555]",
-"官场商战  [597]",
-"科幻小说  [633]",
-"武侠小说  [688]",
-"网游竞技  [1434]",
-"历史军工  [1753]",
-"都市异能  [1888]",
-"都市生活  [1937]",
-"仙侠修真  [2256]",
-"异世大陆  [2386]",
-"东方玄幻  [4564]",
-"言情小说  [5126]"
+"名著其他  [450/16201]",
+"穿越言情  [14746/30947]",
+"历史架空  [2633/11357]",
+"科幻战争  [2846/8724]",
+"网游同人  [3060/34007]",
+"仙侠修真  [4394/15751]",
+"都市官场  [5878/5878]",
+"玄幻奇幻  [8833/42840]"
 ]
-a=["奇幻魔法","探险推理","作者合集","耽美百合","军警谍战",
-"都市异能","都市生活","武侠小说","历史军工","现代异侠",
-"网游竞技","官场商战","热血青春","仙侠修真","东方玄幻",
-"灵异奇谈","衍生同人","职场励志","现代修真","异世大陆",
-"言情小说","科幻小说"]
+a=["都市官场","科幻战争",
+"历史架空","仙侠修真",
+"名著其他","穿越言情",
+"网游同人","玄幻奇幻"]
 #print(sys.argv[1])
-#mymongo=PymongoDataSave()
-#mymongo.print_database_and_table_name()
-#mymongo.getData('异世大陆')
+mymongo=PymongoDataSave()
+mymongo.print_database_and_table_name()
+#mymongo.getData('名著其他')
